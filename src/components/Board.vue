@@ -22,8 +22,6 @@ const filter = ref('')
 
 const { writeTicket } = useTicketWriter()
 
-const isEditable = import.meta.env.DEV
-
 // Load tickets from dev plugin or static JSON
 if (typeof window !== 'undefined') {
   const url = import.meta.env.DEV
@@ -66,26 +64,44 @@ function openNewTicket() {
 }
 
 async function confirmCreate(draft: Ticket) {
-  try {
-    const res = await fetch('/__vitepress_pm_create', {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({
-        dir: ticketsDir.value,
-        status: draft.status,
-        title: draft.title,
-        priority: draft.priority,
-        tags: draft.tags,
-        body: draft.body,
-      }),
-    })
-    if (!res.ok) throw new Error(await res.text())
-    const ticket: Ticket = await res.json()
-    tickets.value = [...tickets.value, ticket]
-    draftTicket.value = null
-  } catch (e) {
-    console.error('Failed to create ticket:', e)
+  if (import.meta.env.DEV) {
+    try {
+      const res = await fetch('/__vitepress_pm_create', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          dir: ticketsDir.value,
+          status: draft.status,
+          title: draft.title,
+          priority: draft.priority,
+          tags: draft.tags,
+          body: draft.body,
+        }),
+      })
+      if (!res.ok) throw new Error(await res.text())
+      const ticket: Ticket = await res.json()
+      tickets.value = [...tickets.value, ticket]
+      draftTicket.value = null
+      return
+    } catch (e) {
+      console.error('Failed to create ticket:', e)
+      return
+    }
   }
+
+  // Production: create in-memory only
+  const maxId = tickets.value.reduce((m, t) => Math.max(m, t.id), 0)
+  const ticket: Ticket = {
+    id: maxId + 1,
+    title: draft.title,
+    status: draft.status,
+    priority: draft.priority,
+    tags: [...draft.tags],
+    body: draft.body,
+    url: '',
+  }
+  tickets.value = [...tickets.value, ticket]
+  draftTicket.value = null
 }
 
 function deleteTicket(id: number) {
@@ -133,7 +149,6 @@ const { dragOverColumn, handleDragStart, handleDragEnd, handleDragOver, handleDr
         style="font-size: 12px; padding: 5px 10px; background: #171923; border: 1px solid #2d3748; border-radius: 5px; color: #e2e8f0; outline: none; width: 200px"
       >
       <button
-        v-if="isEditable"
         title="New ticket"
         style="font-size: 13px; padding: 4px 12px; background: #2d3748; border: 1px solid #4a5568; border-radius: 5px; color: #e2e8f0; cursor: pointer; font-weight: 600; line-height: 1.2"
         @click="openNewTicket"
@@ -150,7 +165,6 @@ const { dragOverColumn, handleDragStart, handleDragEnd, handleDragOver, handleDr
         :selected-id="selectedId"
         :ticket-prefix="ticketPrefix"
         :is-over="dragOverColumn === col.key"
-        :editable="isEditable"
         @select="(id: number) => selectedId = selectedId === id ? null : id"
         @dragstart="(e: DragEvent, id: number) => handleDragStart(e, String(id))"
         @dragend="handleDragEnd"
@@ -178,7 +192,6 @@ const { dragOverColumn, handleDragStart, handleDragEnd, handleDragOver, handleDr
       :ticket="selectedTicket"
       :columns="columns"
       :ticket-prefix="ticketPrefix"
-      :editable="isEditable"
       @close="selectedId = null"
       @update="updateTicket"
       @delete="deleteTicket"

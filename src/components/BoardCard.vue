@@ -9,7 +9,6 @@ const props = defineProps<{
   color: string
   selected: boolean
   ticketPrefix: string
-  editable?: boolean
 }>()
 
 defineEmits<{
@@ -33,13 +32,13 @@ const displayId = computed(() =>
 
 <template>
   <div
-    :draggable="editable ? 'true' : 'false'"
+    draggable="true"
     :style="{
       background: selected ? '#2d3748' : '#1a202c',
       border: selected ? `2px solid ${color}` : '1px solid #2d3748',
       borderRadius: '7px',
       padding: '10px 12px',
-      cursor: editable ? 'grab' : 'pointer',
+      cursor: 'grab',
       userSelect: 'none',
       transition: 'border-color 0.15s',
     }"

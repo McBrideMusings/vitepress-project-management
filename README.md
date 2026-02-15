@@ -2,6 +2,8 @@
 
 A VitePress theme that adds a kanban board for project management. Tickets are individual `.md` files with YAML frontmatter — your board lives in your docs repo.
 
+[Demo](https://mcbridemusings.github.io/vitepress-project-management/board.html)
+
 ## Install
 
 ```bash
@@ -15,8 +17,8 @@ npm install vitepress-theme-pm
 `.vitepress/theme/index.ts`:
 
 ```ts
-import Theme from 'vitepress-theme-pm'
-export default Theme
+import Theme from "vitepress-theme-pm";
+export default Theme;
 ```
 
 ### 2. Plugin
@@ -24,14 +26,14 @@ export default Theme
 `.vitepress/config.ts`:
 
 ```ts
-import { defineConfig } from 'vitepress'
-import { markdownWriterPlugin } from 'vitepress-theme-pm/plugin'
+import { defineConfig } from "vitepress";
+import { markdownWriterPlugin } from "vitepress-theme-pm/plugin";
 
 export default defineConfig({
   vite: {
-    plugins: [markdownWriterPlugin()]
-  }
-})
+    plugins: [markdownWriterPlugin()],
+  },
+});
 ```
 
 ### 3. Board page
@@ -46,10 +48,10 @@ ticketsDir: tickets
 ticketPrefix: PM
 defaultColumn: backlog
 columns:
-  - { key: backlog, label: Backlog, color: '#718096' }
-  - { key: doing, label: In Progress, color: '#e6a817' }
-  - { key: review, label: Review, color: '#9f7aea' }
-  - { key: done, label: Done, color: '#6bcb6b' }
+  - { key: backlog, label: Backlog, color: "#718096" }
+  - { key: doing, label: In Progress, color: "#e6a817" }
+  - { key: review, label: Review, color: "#9f7aea" }
+  - { key: done, label: Done, color: "#6bcb6b" }
 ---
 ```
 

@@ -8,7 +8,6 @@ defineProps<{
   selectedId: number | null
   ticketPrefix: string
   isOver: boolean
-  editable?: boolean
 }>()
 
 defineEmits<{
@@ -78,7 +77,6 @@ defineEmits<{
         :color="column.color"
         :selected="selectedId === ticket.id"
         :ticket-prefix="ticketPrefix"
-        :editable="editable"
         @select="$emit('select', ticket.id)"
         @dragstart="$emit('dragstart', $event, ticket.id)"
         @dragend="$emit('dragend', $event)"
