@@ -4,7 +4,11 @@
   "description": "A VitePress theme that adds a kanban board for project management with markdown tickets",
   "type": "module",
   "license": "MIT",
-  "author": "Pierce",
+  "homepage": "https://github.com/McBrideMusings/vitepress-project-management",
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/McBrideMusings/vitepress-project-management.git"
+  },
   "keywords": [
     "vitepress",
     "vitepress-theme",
