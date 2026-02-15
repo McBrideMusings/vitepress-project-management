@@ -1,0 +1,33 @@
+{
+  "name": "vitepress-theme-pm",
+  "version": "0.1.0",
+  "description": "A VitePress theme that adds a kanban board for project management with markdown tickets",
+  "type": "module",
+  "license": "MIT",
+  "author": "Pierce",
+  "keywords": [
+    "vitepress",
+    "vitepress-theme",
+    "kanban",
+    "project-management",
+    "markdown",
+    "vue"
+  ],
+  "exports": {
+    ".": "./src/index.ts",
+    "./plugin": "./src/plugins/markdownWriter.ts"
+  },
+  "bin": {
+    "vitepress-theme-pm": "./src/cli.mjs"
+  },
+  "files": [
+    "src"
+  ],
+  "peerDependencies": {
+    "vitepress": ">=1.0.0",
+    "vue": ">=3.3.0"
+  },
+  "dependencies": {
+    "gray-matter": "^4.0.3"
+  }
+}
