@@ -13,19 +13,26 @@
     "markdown",
     "vue"
   ],
+  "scripts": {
+    "build": "esbuild src/plugins/markdownWriter.ts --format=esm --platform=node --bundle --external:gray-matter --external:vite --outfile=dist/plugin.mjs"
+  },
   "exports": {
     ".": "./src/index.ts",
-    "./plugin": "./src/plugins/markdownWriter.ts"
+    "./plugin": "./dist/plugin.mjs"
   },
   "bin": {
     "vitepress-theme-pm": "./src/cli.mjs"
   },
   "files": [
-    "src"
+    "src",
+    "dist"
   ],
   "peerDependencies": {
     "vitepress": ">=1.0.0",
     "vue": ">=3.3.0"
+  },
+  "devDependencies": {
+    "esbuild": ">=0.17.0"
   },
   "dependencies": {
     "gray-matter": "^4.0.3"
