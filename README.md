@@ -1,4 +1,4 @@
-# vitepress-theme-pm
+# vitepress-project-management
 
 A VitePress theme that adds a kanban board for project management. Tickets are individual `.md` files with YAML frontmatter — your board lives in your docs repo.
 
