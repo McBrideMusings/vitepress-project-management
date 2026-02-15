@@ -2,6 +2,7 @@ import { defineConfig } from 'vitepress'
 import { markdownWriterPlugin } from 'vitepress-theme-pm/plugin'
 
 export default defineConfig({
+  base: process.env.BASE_URL || '/',
   title: 'Example Project',
   description: 'An example VitePress site using vitepress-theme-pm',
 
