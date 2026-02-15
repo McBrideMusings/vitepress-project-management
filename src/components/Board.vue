@@ -22,9 +22,15 @@ const filter = ref('')
 
 const { writeTicket } = useTicketWriter()
 
-// Load tickets from the dev plugin
+const isEditable = import.meta.env.DEV
+
+// Load tickets from dev plugin or static JSON
 if (typeof window !== 'undefined') {
-  fetch(`/__vitepress_pm_tickets?dir=${encodeURIComponent(ticketsDir.value)}`)
+  const url = import.meta.env.DEV
+    ? `/__vitepress_pm_tickets?dir=${encodeURIComponent(ticketsDir.value)}`
+    : `${import.meta.env.BASE_URL}__vitepress_pm_tickets/${encodeURIComponent(ticketsDir.value)}.json`
+
+  fetch(url)
     .then(r => {
       if (r.ok) return r.json()
       throw new Error('not available')
@@ -127,6 +133,7 @@ const { dragOverColumn, handleDragStart, handleDragEnd, handleDragOver, handleDr
         style="font-size: 12px; padding: 5px 10px; background: #171923; border: 1px solid #2d3748; border-radius: 5px; color: #e2e8f0; outline: none; width: 200px"
       >
       <button
+        v-if="isEditable"
         title="New ticket"
         style="font-size: 13px; padding: 4px 12px; background: #2d3748; border: 1px solid #4a5568; border-radius: 5px; color: #e2e8f0; cursor: pointer; font-weight: 600; line-height: 1.2"
         @click="openNewTicket"
@@ -143,6 +150,7 @@ const { dragOverColumn, handleDragStart, handleDragEnd, handleDragOver, handleDr
         :selected-id="selectedId"
         :ticket-prefix="ticketPrefix"
         :is-over="dragOverColumn === col.key"
+        :editable="isEditable"
         @select="(id: number) => selectedId = selectedId === id ? null : id"
         @dragstart="(e: DragEvent, id: number) => handleDragStart(e, String(id))"
         @dragend="handleDragEnd"
@@ -170,6 +178,7 @@ const { dragOverColumn, handleDragStart, handleDragEnd, handleDragOver, handleDr
       :ticket="selectedTicket"
       :columns="columns"
       :ticket-prefix="ticketPrefix"
+      :editable="isEditable"
       @close="selectedId = null"
       @update="updateTicket"
       @delete="deleteTicket"

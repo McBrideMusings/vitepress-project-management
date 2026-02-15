@@ -3,6 +3,36 @@ import fs from 'node:fs'
 import path from 'node:path'
 import matter from 'gray-matter'
 
+interface ScannedTicket {
+  id: number
+  title: string
+  status: string
+  priority: string
+  tags: string[]
+  body: string
+  url: string
+}
+
+/** Scan a tickets directory and return all tickets as JSON-serializable objects. */
+export function scanTickets(ticketsDir: string, dirRelative: string): ScannedTicket[] {
+  if (!fs.existsSync(ticketsDir)) return []
+
+  const files = fs.readdirSync(ticketsDir).filter(f => f.endsWith('.md'))
+  return files.map(file => {
+    const raw = fs.readFileSync(path.join(ticketsDir, file), 'utf-8')
+    const parsed = matter(raw)
+    return {
+      id: Number(parsed.data.id) || 0,
+      title: parsed.data.title || path.basename(file, '.md'),
+      status: parsed.data.status || 'backlog',
+      priority: parsed.data.priority || 'medium',
+      tags: parsed.data.tags || [],
+      body: parsed.content.trim(),
+      url: `/${dirRelative}/${path.basename(file, '.md')}.html`,
+    }
+  })
+}
+
 /** Scan a tickets directory and return the highest numeric `id` found in frontmatter. */
 export function getMaxTicketId(ticketsDir: string): number {
   if (!fs.existsSync(ticketsDir)) return 0
@@ -17,13 +47,25 @@ export function getMaxTicketId(ticketsDir: string): number {
   return max
 }
 
+function findMarkdownFiles(dir: string): string[] {
+  const results: string[] = []
+  for (const entry of fs.readdirSync(dir, { withFileTypes: true })) {
+    const full = path.join(dir, entry.name)
+    if (entry.isDirectory() && !entry.name.startsWith('.') && entry.name !== 'node_modules') {
+      results.push(...findMarkdownFiles(full))
+    } else if (entry.isFile() && entry.name.endsWith('.md')) {
+      results.push(full)
+    }
+  }
+  return results
+}
+
 export function markdownWriterPlugin(): Plugin {
   let srcDir = ''
   let nextId = 0
 
   return {
     name: 'vitepress-pm-markdown-writer',
-    apply: 'serve',
 
     configResolved(config) {
       srcDir = config.root
@@ -36,31 +78,11 @@ export function markdownWriterPlugin(): Plugin {
         const dir = url.searchParams.get('dir') || 'tickets'
         const ticketsDir = path.resolve(srcDir, dir)
 
-        if (!fs.existsSync(ticketsDir)) {
-          res.setHeader('Content-Type', 'application/json')
-          res.end('[]')
-          return
-        }
-
-        const files = fs.readdirSync(ticketsDir).filter(f => f.endsWith('.md'))
-        let maxId = 0
-        const tickets = files.map(file => {
-          const raw = fs.readFileSync(path.join(ticketsDir, file), 'utf-8')
-          const parsed = matter(raw)
-          const id = Number(parsed.data.id) || 0
-          if (id > maxId) maxId = id
-          return {
-            id,
-            title: parsed.data.title || path.basename(file, '.md'),
-            status: parsed.data.status || 'backlog',
-            priority: parsed.data.priority || 'medium',
-            tags: parsed.data.tags || [],
-            body: parsed.content.trim(),
-            url: `/${dir}/${path.basename(file, '.md')}.html`,
-          }
-        })
+        const tickets = scanTickets(ticketsDir, dir)
 
         // Keep server counter in sync
+        let maxId = 0
+        for (const t of tickets) { if (t.id > maxId) maxId = t.id }
         nextId = maxId + 1
 
         res.setHeader('Content-Type', 'application/json')
@@ -171,6 +193,31 @@ export function markdownWriterPlugin(): Plugin {
           }
         })
       })
+    },
+
+    generateBundle() {
+      // Find .md files with board: true frontmatter and emit static ticket JSON
+      const mdFiles = findMarkdownFiles(srcDir)
+      const seen = new Set<string>()
+
+      for (const file of mdFiles) {
+        const raw = fs.readFileSync(file, 'utf-8')
+        const parsed = matter(raw)
+        if (!parsed.data.board) continue
+
+        const dir = parsed.data.ticketsDir || 'tickets'
+        if (seen.has(dir)) continue
+        seen.add(dir)
+
+        const ticketsDir = path.resolve(srcDir, dir)
+        const tickets = scanTickets(ticketsDir, dir)
+
+        this.emitFile({
+          type: 'asset',
+          fileName: `__vitepress_pm_tickets/${dir}.json`,
+          source: JSON.stringify(tickets),
+        })
+      }
     },
   }
 }

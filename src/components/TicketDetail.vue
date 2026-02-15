@@ -11,8 +11,10 @@ const props = withDefaults(defineProps<{
   columns: Column[]
   ticketPrefix: string
   createMode?: boolean
+  editable?: boolean
 }>(), {
   createMode: false,
+  editable: true,
 })
 
 const emit = defineEmits<{
@@ -138,7 +140,7 @@ function onBackdropClick(e: MouseEvent) {
 
         <!-- Edit title button -->
         <button
-          v-if="!editTitle"
+          v-if="editable && !editTitle"
           title="Edit title"
           style="background: none; border: 1px solid #2d3748; color: #718096; cursor: pointer; font-size: 13px; padding: 4px 8px; border-radius: 4px; flex-shrink: 0; line-height: 1"
           @click="titleDraft = ticket.title; editTitle = true"
@@ -163,7 +165,7 @@ function onBackdropClick(e: MouseEvent) {
           <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 12px">
             <span style="font-size: 12px; color: #718096; text-transform: uppercase; letter-spacing: 1px; font-weight: 700">Description</span>
             <button
-              v-if="!editing"
+              v-if="editable && !editing"
               style="font-size: 12px; color: #e6a817; background: none; border: 1px solid rgba(230, 168, 23, 0.27); border-radius: 4px; padding: 3px 12px; cursor: pointer"
               @click="draft = ticket.body; editing = true"
             >Edit</button>
@@ -197,6 +199,7 @@ function onBackdropClick(e: MouseEvent) {
             <div style="position: relative">
               <select
                 :value="ticket.status"
+                :disabled="!editable"
                 style="width: 100%; appearance: none; font-size: 13px; padding: 7px 32px 7px 10px; background: #0d1117; border: 1px solid #2d3748; border-radius: 6px; color: #e2e8f0; outline: none; cursor: pointer"
                 @change="emit('update', ticket.id, { status: ($event.target as HTMLSelectElement).value })"
               >
@@ -216,6 +219,7 @@ function onBackdropClick(e: MouseEvent) {
             <div style="position: relative">
               <select
                 :value="ticket.priority"
+                :disabled="!editable"
                 style="width: 100%; appearance: none; font-size: 13px; padding: 7px 32px 7px 10px; background: #0d1117; border: 1px solid #2d3748; border-radius: 6px; color: #e2e8f0; outline: none; cursor: pointer"
                 @change="emit('update', ticket.id, { priority: ($event.target as HTMLSelectElement).value as any })"
               >
@@ -228,7 +232,15 @@ function onBackdropClick(e: MouseEvent) {
           <!-- Tags -->
           <div style="margin-bottom: 20px">
             <label style="display: block; font-size: 11px; color: #718096; text-transform: uppercase; letter-spacing: 1px; font-weight: 700; margin-bottom: 6px">Tags</label>
-            <TagEditor :tags="ticket.tags" @add="addTag" @remove="removeTag" />
+            <TagEditor v-if="editable" :tags="ticket.tags" @add="addTag" @remove="removeTag" />
+            <div v-else style="display: flex; flex-wrap: wrap; gap: 4px">
+              <span
+                v-for="tag in ticket.tags"
+                :key="tag"
+                style="font-size: 11px; padding: 2px 8px; border-radius: 8px; background: #2d3748; color: #718096"
+              >{{ tag }}</span>
+              <span v-if="!ticket.tags.length" style="font-size: 12px; color: #4a5568">None</span>
+            </div>
           </div>
 
           <!-- Ticket ID -->
@@ -238,7 +250,7 @@ function onBackdropClick(e: MouseEvent) {
           </div>
 
           <!-- Create / Delete -->
-          <div style="padding-top: 20px; border-top: 1px solid #2d3748">
+          <div v-if="editable" style="padding-top: 20px; border-top: 1px solid #2d3748">
             <button
               v-if="createMode"
               style="font-size: 12px; color: #6bcb6b; background: rgba(107, 203, 107, 0.09); border: 1px solid rgba(107, 203, 107, 0.27); border-radius: 6px; padding: 6px 14px; cursor: pointer; width: 100%; font-weight: 600"

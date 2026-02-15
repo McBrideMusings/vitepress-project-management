@@ -4,7 +4,7 @@ export function useTicketWriter() {
   const saving = ref(false)
   const error = ref<string | null>(null)
 
-  const isDev = typeof window !== 'undefined' && window.location.hostname === 'localhost'
+  const isDev = import.meta.env.DEV
 
   async function writeTicket(url: string, updates: Record<string, unknown>) {
     if (!isDev) return
