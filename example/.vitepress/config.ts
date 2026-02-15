@@ -11,6 +11,10 @@ export default defineConfig({
   },
 
   themeConfig: {
+    socialLinks: [
+      { icon: 'github', link: 'https://github.com/McBrideMusings/vitepress-project-management' },
+    ],
+
     nav: [
       { text: 'Guide', link: '/guide/getting-started' },
       { text: 'Architecture', link: '/architecture/overview' },

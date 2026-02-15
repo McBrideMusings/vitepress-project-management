@@ -18,7 +18,8 @@
     "vue"
   ],
   "scripts": {
-    "build": "esbuild src/plugins/markdownWriter.ts --format=esm --platform=node --bundle --external:gray-matter --external:vite --outfile=dist/plugin.mjs"
+    "build": "esbuild src/plugins/markdownWriter.ts --format=esm --platform=node --bundle --external:gray-matter --external:vite --outfile=dist/plugin.mjs",
+    "prepublishOnly": "npm run build"
   },
   "exports": {
     ".": "./src/index.ts",
