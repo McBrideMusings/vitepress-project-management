@@ -1,6 +1,7 @@
 ---
 layout: page
 board: true
+demo: true
 ticketsDir: tickets
 ticketPrefix: PM
 defaultColumn: backlog

@@ -41,6 +41,9 @@ const checks = computed(() => countCheckboxes(props.ticket.body))
 const displayId = computed(() =>
   props.ticketPrefix ? `${props.ticketPrefix}-${props.ticket.id}` : String(props.ticket.id)
 )
+const filePath = computed(() =>
+  props.ticket.url ? props.ticket.url.replace(/^\//, '').replace(/\.html$/, '.md') : ''
+)
 
 watch(() => props.ticket.id, () => {
   draft.value = props.ticket.body
@@ -164,9 +167,10 @@ function onBackdropClick(e: MouseEvent) {
             <span style="font-size: 12px; color: #718096; text-transform: uppercase; letter-spacing: 1px; font-weight: 700">Description</span>
             <button
               v-if="!editing"
-              style="font-size: 12px; color: #e6a817; background: none; border: 1px solid rgba(230, 168, 23, 0.27); border-radius: 4px; padding: 3px 12px; cursor: pointer"
+              title="Edit description"
+              style="background: none; border: 1px solid #2d3748; color: #718096; cursor: pointer; font-size: 13px; padding: 4px 8px; border-radius: 4px; line-height: 1"
               @click="draft = ticket.body; editing = true"
-            >Edit</button>
+            >&#9998;</button>
             <div v-else style="display: flex; gap: 6px">
               <button
                 style="font-size: 12px; color: #6bcb6b; background: rgba(107, 203, 107, 0.09); border: 1px solid rgba(107, 203, 107, 0.27); border-radius: 4px; padding: 3px 12px; cursor: pointer"
@@ -231,10 +235,10 @@ function onBackdropClick(e: MouseEvent) {
             <TagEditor :tags="ticket.tags" @add="addTag" @remove="removeTag" />
           </div>
 
-          <!-- Ticket ID -->
-          <div v-if="!createMode" style="margin-bottom: 20px">
-            <label style="display: block; font-size: 11px; color: #718096; text-transform: uppercase; letter-spacing: 1px; font-weight: 700; margin-bottom: 6px">ID</label>
-            <span style="font-size: 13px; color: #4a5568; font-family: monospace">{{ displayId }}</span>
+          <!-- File path -->
+          <div v-if="!createMode && filePath" style="margin-bottom: 20px">
+            <label style="display: block; font-size: 11px; color: #718096; text-transform: uppercase; letter-spacing: 1px; font-weight: 700; margin-bottom: 6px">File</label>
+            <span style="font-size: 12px; color: #4a5568; font-family: monospace; word-break: break-all">{{ filePath }}</span>
           </div>
 
           <!-- Create / Delete -->

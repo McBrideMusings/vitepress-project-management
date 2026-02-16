@@ -18,7 +18,9 @@ Options:
   --dir <path>       Tickets directory (default: tickets)
   --status <status>  Initial status (default: backlog)
   --priority <pri>   Priority: critical, high, medium, low (default: medium)
-  --tags <tags>      Comma-separated tags`)
+  --tags <tags>      Comma-separated tags
+  --body <text>      Ticket body/description (markdown)
+  --prefix <prefix>  Ticket ID prefix (overrides board.md ticketPrefix)`)
   process.exit(command ? 1 : 0)
 }
 
@@ -41,6 +43,8 @@ function parseArgs(args) {
   let status = 'backlog'
   let priority = 'medium'
   let tags = []
+  let body = ''
+  let prefix = null
 
   let i = 0
   while (i < args.length) {
@@ -48,11 +52,13 @@ function parseArgs(args) {
     if (args[i] === '--status') { status = args[++i]; i++; continue }
     if (args[i] === '--priority') { priority = args[++i]; i++; continue }
     if (args[i] === '--tags') { tags = args[++i].split(',').map(t => t.trim()).filter(Boolean); i++; continue }
+    if (args[i] === '--body') { body = args[++i]; i++; continue }
+    if (args[i] === '--prefix') { prefix = args[++i]; i++; continue }
     if (!title) { title = args[i] }
     i++
   }
 
-  return { title, dir, status, priority, tags }
+  return { title, dir, status, priority, tags, body, prefix }
 }
 
 function readTicketPrefix(siteDir) {
@@ -81,6 +87,7 @@ function createTicket(args) {
   }
 
   const id = getMaxTicketId(ticketsDir) + 1
+  const prefix = opts.prefix !== null ? opts.prefix : readTicketPrefix(path.dirname(ticketsDir))
   const frontmatter = {
     id,
     title: opts.title,
@@ -91,11 +98,12 @@ function createTicket(args) {
     frontmatter.tags = opts.tags
   }
 
-  const content = matter.stringify('\n', frontmatter)
-  const filePath = path.join(ticketsDir, `${id}.md`)
+  const slug = prefix ? `${prefix}-${id}` : String(id)
+  const bodyContent = opts.body ? `\n${opts.body}\n` : '\n'
+  const content = matter.stringify(bodyContent, frontmatter)
+  const filePath = path.join(ticketsDir, `${slug}.md`)
   fs.writeFileSync(filePath, content)
 
-  const prefix = readTicketPrefix(path.dirname(ticketsDir))
   const displayId = prefix ? `${prefix}-${id}` : String(id)
 
   console.log(`Created ${displayId}: ${opts.title}`)

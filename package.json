@@ -1,6 +1,6 @@
 {
   "name": "vitepress-theme-pm",
-  "version": "0.1.0",
+  "version": "0.2.0",
   "description": "A VitePress theme that adds a kanban board for project management with markdown tickets",
   "type": "module",
   "license": "MIT",

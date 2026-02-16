@@ -33,6 +33,104 @@ export function scanTickets(ticketsDir: string, dirRelative: string): ScannedTic
   })
 }
 
+interface TicketIssue {
+  file: string
+  currentId: number
+  currentSlug: string
+  fixedId: number
+  fixedSlug: string
+}
+
+/** Validate tickets for duplicate IDs, missing IDs, and filename/ID mismatches. */
+export function validateTickets(ticketsDir: string, dirRelative: string, prefix: string): TicketIssue[] {
+  if (!fs.existsSync(ticketsDir)) return []
+
+  const files = fs.readdirSync(ticketsDir).filter(f => f.endsWith('.md'))
+  const issues: TicketIssue[] = []
+
+  // Parse all tickets
+  const entries = files.map(file => {
+    const raw = fs.readFileSync(path.join(ticketsDir, file), 'utf-8')
+    const parsed = matter(raw)
+    const id = Number(parsed.data.id) || 0
+    const slug = path.basename(file, '.md')
+    return { file, id, slug }
+  })
+
+  // Detect duplicate IDs (only non-zero)
+  const idCounts = new Map<number, number>()
+  for (const e of entries) {
+    if (e.id > 0) idCounts.set(e.id, (idCounts.get(e.id) || 0) + 1)
+  }
+
+  // Check each ticket for issues
+  for (const e of entries) {
+    const expectedSlug = prefix ? `${prefix}-${e.id}` : String(e.id)
+    const isDuplicate = e.id > 0 && (idCounts.get(e.id) || 0) > 1
+    const isMissing = e.id <= 0
+    const isMismatch = e.id > 0 && e.slug !== expectedSlug
+
+    if (isDuplicate || isMissing || isMismatch) {
+      issues.push({
+        file: e.file,
+        currentId: e.id,
+        currentSlug: e.slug,
+        fixedId: 0, // assigned below
+        fixedSlug: '', // assigned below
+      })
+    }
+  }
+
+  // Assign fresh sequential IDs to issues
+  // Collect IDs that are NOT problematic (keep them)
+  const goodIds = new Set<number>()
+  for (const e of entries) {
+    const expectedSlug = prefix ? `${prefix}-${e.id}` : String(e.id)
+    const isDuplicate = e.id > 0 && (idCounts.get(e.id) || 0) > 1
+    const isMissing = e.id <= 0
+    const isMismatch = e.id > 0 && e.slug !== expectedSlug
+    if (!isDuplicate && !isMissing && !isMismatch) {
+      goodIds.add(e.id)
+    }
+  }
+
+  let nextFixId = 1
+  for (const issue of issues) {
+    while (goodIds.has(nextFixId)) nextFixId++
+    issue.fixedId = nextFixId
+    issue.fixedSlug = prefix ? `${prefix}-${nextFixId}` : String(nextFixId)
+    goodIds.add(nextFixId)
+    nextFixId++
+  }
+
+  return issues
+}
+
+/** Fix all ticket issues by rewriting frontmatter IDs and renaming files. */
+function fixTickets(ticketsDir: string, dirRelative: string, prefix: string): TicketIssue[] {
+  const issues = validateTickets(ticketsDir, dirRelative, prefix)
+  if (issues.length === 0) return []
+
+  for (const issue of issues) {
+    const oldPath = path.join(ticketsDir, issue.file)
+    const newFile = `${issue.fixedSlug}.md`
+    const newPath = path.join(ticketsDir, newFile)
+
+    const raw = fs.readFileSync(oldPath, 'utf-8')
+    const parsed = matter(raw)
+    parsed.data.id = issue.fixedId
+    const output = matter.stringify(parsed.content, parsed.data)
+
+    // Write to new path first, then remove old if different
+    fs.writeFileSync(newPath, output)
+    if (oldPath !== newPath && fs.existsSync(oldPath)) {
+      fs.unlinkSync(oldPath)
+    }
+  }
+
+  return issues
+}
+
 /** Scan a tickets directory and return the highest numeric `id` found in frontmatter. */
 export function getMaxTicketId(ticketsDir: string): number {
   if (!fs.existsSync(ticketsDir)) return 0
@@ -89,6 +187,42 @@ export function markdownWriterPlugin(): Plugin {
         res.end(JSON.stringify(tickets))
       })
 
+      // Validate tickets for issues
+      server.middlewares.use('/__vitepress_pm_validate', (req, res) => {
+        const url = new URL(req.url || '/', 'http://localhost')
+        const dir = url.searchParams.get('dir') || 'tickets'
+        const prefix = url.searchParams.get('prefix') || ''
+        const ticketsDir = path.resolve(srcDir, dir)
+
+        const issues = validateTickets(ticketsDir, dir, prefix)
+        res.setHeader('Content-Type', 'application/json')
+        res.end(JSON.stringify(issues))
+      })
+
+      // Fix ticket issues (reassign IDs, rename files)
+      server.middlewares.use('/__vitepress_pm_fix', (req, res) => {
+        if (req.method !== 'POST') {
+          res.statusCode = 405
+          res.end('Method not allowed')
+          return
+        }
+
+        let body = ''
+        req.on('data', (chunk: string) => { body += chunk })
+        req.on('end', () => {
+          try {
+            const { dir, prefix } = JSON.parse(body)
+            const ticketsDir = path.resolve(srcDir, dir || 'tickets')
+            const fixed = fixTickets(ticketsDir, dir || 'tickets', prefix || '')
+            res.setHeader('Content-Type', 'application/json')
+            res.end(JSON.stringify(fixed))
+          } catch (e) {
+            res.statusCode = 500
+            res.end(String(e))
+          }
+        })
+      })
+
       // Create a new ticket (server-assigned sequential ID)
       server.middlewares.use('/__vitepress_pm_create', (req, res) => {
         if (req.method !== 'POST') {
@@ -101,7 +235,7 @@ export function markdownWriterPlugin(): Plugin {
         req.on('data', chunk => { body += chunk })
         req.on('end', () => {
           try {
-            const { dir, status, title, priority, tags, body: ticketBody } = JSON.parse(body)
+            const { dir, prefix, status, title, priority, tags, body: ticketBody } = JSON.parse(body)
             const ticketsDir = path.resolve(srcDir, dir || 'tickets')
 
             if (!fs.existsSync(ticketsDir)) {
@@ -121,15 +255,16 @@ export function markdownWriterPlugin(): Plugin {
               tags: tags || [],
             }
 
+            const slug = prefix ? `${prefix}-${id}` : String(id)
             const bodyContent = ticketBody ? `\n${ticketBody}\n` : '\n'
             const content = matter.stringify(bodyContent, frontmatter)
-            const filePath = path.join(ticketsDir, `${id}.md`)
+            const filePath = path.join(ticketsDir, `${slug}.md`)
             fs.writeFileSync(filePath, content)
 
             const ticket = {
               ...frontmatter,
               body: ticketBody || '',
-              url: `/${dir || 'tickets'}/${id}.html`,
+              url: `/${dir || 'tickets'}/${slug}.html`,
             }
 
             res.setHeader('Content-Type', 'application/json')
