@@ -18,12 +18,16 @@
     "vue"
   ],
   "scripts": {
-    "build": "esbuild src/plugins/markdownWriter.ts --format=esm --platform=node --bundle --external:gray-matter --external:vite --outfile=dist/plugin.mjs",
+    "build": "esbuild src/plugins/markdownWriter.ts --format=esm --platform=node --bundle --external:gray-matter --external:vite --outfile=dist/plugin.mjs && npm run build:types",
+    "build:types": "tsc -p tsconfig.plugin.json && mv dist/markdownWriter.d.ts dist/plugin.d.ts",
     "prepublishOnly": "npm run build"
   },
   "exports": {
     ".": "./src/index.ts",
-    "./plugin": "./dist/plugin.mjs"
+    "./plugin": {
+      "types": "./dist/plugin.d.ts",
+      "default": "./dist/plugin.mjs"
+    }
   },
   "bin": {
     "vitepress-theme-pm": "./src/cli.mjs"
@@ -37,7 +41,9 @@
     "vue": ">=3.3.0"
   },
   "devDependencies": {
-    "esbuild": ">=0.17.0"
+    "@types/node": "^26.1.1",
+    "esbuild": ">=0.17.0",
+    "typescript": "^5.6.0"
   },
   "dependencies": {
     "gray-matter": "^4.0.3"
